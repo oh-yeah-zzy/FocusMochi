@@ -52,7 +52,8 @@ nokhwa = { version = "0.10", features = ["input-native"], optional = true }
 
 # ONNX Runtime - 人脸检测推理
 # 使用 load-dynamic 动态加载运行时库
-ort = { version = "2", default-features = false, features = ["ndarray", "load-dynamic"], optional = true }
+# 注意: ort 2.0 正式版尚未发布，需要明确指定预发布版本
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "load-dynamic"], optional = true }
 
 # ndarray - 张量操作
 ndarray = { version = "0.16", optional = true }
