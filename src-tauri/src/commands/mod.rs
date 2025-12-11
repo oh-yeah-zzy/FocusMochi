@@ -7,7 +7,7 @@ use crate::state::{FocusStats, GestureType, PetMood, PetStateMachine, PetStateCo
 use crate::vision::{FocusState, VisionProcessor, VisionProcessorConfig};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::State;
+use tauri::{State, Manager, Emitter};
 use parking_lot::Mutex;
 use tokio::sync::watch;
 

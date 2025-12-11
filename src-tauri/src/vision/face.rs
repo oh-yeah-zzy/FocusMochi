@@ -116,7 +116,7 @@ pub struct BlazeFaceDetector {
     nms_threshold: f32,
     /// ONNX 会话（仅在 vision feature 启用时使用）
     #[cfg(feature = "vision")]
-    session: ort::Session,
+    session: ort::session::Session,
     /// 锚框数据
     #[cfg(feature = "vision")]
     anchors: ndarray::Array2<f32>,
@@ -131,11 +131,12 @@ impl BlazeFaceDetector {
     #[cfg(feature = "vision")]
     pub fn new(model_path: &str, anchors_path: Option<&str>) -> Result<Self, FaceDetectorError> {
         use ndarray::Array2;
+        use ort::session::{Session, builder::GraphOptimizationLevel};
 
         // 加载 ONNX 模型
-        let session = ort::Session::builder()
+        let session = Session::builder()
             .map_err(|e| FaceDetectorError::ModelLoadError(format!("Session builder error: {}", e)))?
-            .with_optimization_level(ort::GraphOptimizationLevel::Level3)
+            .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| FaceDetectorError::ModelLoadError(format!("Optimization error: {}", e)))?
             .commit_from_file(model_path)
             .map_err(|e| FaceDetectorError::ModelLoadError(format!("Load model error: {}", e)))?;
@@ -216,7 +217,7 @@ impl BlazeFaceDetector {
         }
 
         // 4. 运行推理
-        let input_value = ort::Value::from_array(input_tensor.view())
+        let input_value = ort::value::Value::from_array(input_tensor.view())
             .map_err(|e| FaceDetectorError::InferenceError(format!("Input tensor error: {}", e)))?;
 
         let outputs = self

@@ -11,6 +11,7 @@ pub mod storage;
 pub mod vision;
 
 use commands::AppState;
+use tauri::Manager;
 
 /// 应用主入口
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -124,32 +124,40 @@ impl CameraCapture {
 
         running.store(true, Ordering::SeqCst);
 
-        // 启动采集线程
-        tokio::spawn(async move {
-            tracing::info!("Camera capture starting with config: {:?}", config);
+        #[cfg(feature = "vision")]
+        {
+            // 真实摄像头采集使用标准线程（Camera 不是 Send，不能用 tokio::spawn）
+            std::thread::spawn(move || {
+                tracing::info!("Camera capture starting with config: {:?}", config);
 
-            // 计算帧间隔
-            let frame_interval =
-                std::time::Duration::from_millis(1000 / config.target_fps.max(1) as u64);
+                let frame_interval =
+                    std::time::Duration::from_millis(1000 / config.target_fps.max(1) as u64);
 
-            #[cfg(feature = "vision")]
-            {
-                // 真实摄像头采集（需要 nokhwa）
-                match Self::run_real_capture(&config, &running, &frame_tx, frame_interval).await {
+                match Self::run_real_capture_sync(&config, &running, &frame_tx, frame_interval) {
                     Ok(_) => tracing::info!("Camera capture stopped normally"),
                     Err(e) => tracing::error!("Camera capture error: {}", e),
                 }
-            }
 
-            #[cfg(not(feature = "vision"))]
-            {
-                // 模拟模式（用于开发测试）
+                running.store(false, Ordering::SeqCst);
+                tracing::info!("Camera capture thread exited");
+            });
+        }
+
+        #[cfg(not(feature = "vision"))]
+        {
+            // 模拟模式使用 tokio::spawn（无需真实摄像头）
+            tokio::spawn(async move {
+                tracing::info!("Camera capture starting with config: {:?}", config);
+
+                let frame_interval =
+                    std::time::Duration::from_millis(1000 / config.target_fps.max(1) as u64);
+
                 Self::run_mock_capture(&config, &running, &frame_tx, frame_interval).await;
-            }
 
-            running.store(false, Ordering::SeqCst);
-            tracing::info!("Camera capture thread exited");
-        });
+                running.store(false, Ordering::SeqCst);
+                tracing::info!("Camera capture thread exited");
+            });
+        }
 
         Ok(())
     }
@@ -207,9 +215,9 @@ impl CameraCapture {
         }
     }
 
-    /// 真实摄像头采集循环
+    /// 真实摄像头采集循环（同步版本，在标准线程中运行）
     #[cfg(feature = "vision")]
-    async fn run_real_capture(
+    fn run_real_capture_sync(
         config: &CameraConfig,
         running: &Arc<AtomicBool>,
         frame_tx: &watch::Sender<CapturedFrame>,
@@ -292,7 +300,8 @@ impl CameraCapture {
                 }
             }
 
-            tokio::time::sleep(frame_interval).await;
+            // 使用标准库的 sleep（不是 tokio）
+            std::thread::sleep(frame_interval);
         }
 
         // 关闭摄像头

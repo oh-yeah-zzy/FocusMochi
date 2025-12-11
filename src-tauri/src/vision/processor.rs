@@ -4,7 +4,7 @@
 //! 提供统一的视觉处理循环
 
 use super::{
-    BlazeFaceDetector, CameraCapture, CameraConfig, CapturedFrame, FocusCalculator, FocusState,
+    BlazeFaceDetector, CameraCapture, CameraConfig, FocusCalculator, FocusState,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
