@@ -1,0 +1,381 @@
+/**
+ * 宠物组件样式
+ * Q版麻糬风格的动画效果
+ */
+
+.pet-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.pet-container:hover {
+  transform: scale(1.05);
+}
+
+.pet-container:active {
+  transform: scale(0.95);
+}
+
+/* 宠物主体 */
+.pet-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pet-emoji {
+  font-size: 80px;
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+/* 表情指示器 */
+.pet-mood-indicator {
+  position: absolute;
+  bottom: -30px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mood-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+/* 状态动画 */
+.pet-transitioning .pet-emoji {
+  animation: bounce 0.5s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Idle 状态 - 轻微呼吸动画 */
+.pet-idle .pet-emoji {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Happy 状态 - 轻微摇摆 */
+.pet-happy .pet-emoji {
+  animation: sway 2s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* Excited 状态 - 跳跃 */
+.pet-excited .pet-emoji {
+  animation: jump 0.5s ease-in-out infinite;
+}
+
+@keyframes jump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.1); }
+}
+
+/* Sad 状态 - 下垂 */
+.pet-sad .pet-emoji {
+  animation: droop 2s ease-in-out infinite;
+  filter: saturate(0.5);
+}
+
+@keyframes droop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(5px) rotate(-5deg); }
+}
+
+/* Sleepy 状态 - 缓慢浮动 */
+.pet-sleepy .pet-emoji {
+  animation: float 4s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Interact 状态 - 快速摇动 */
+.pet-interact .pet-emoji {
+  animation: shake 0.3s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+/* 互动特效 - 爱心 */
+.pet-effects {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.effect-heart {
+  position: absolute;
+  font-size: 24px;
+  animation: floatUp 1s ease-out infinite;
+  opacity: 0;
+}
+
+.effect-heart:nth-child(1) {
+  left: -20px;
+  animation-delay: 0s;
+}
+
+.effect-heart:nth-child(2) {
+  left: 0;
+  animation-delay: 0.3s;
+}
+
+.effect-heart:nth-child(3) {
+  left: 20px;
+  animation-delay: 0.6s;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+}
+
+/* 专注光环 */
+.pet-aura {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 223, 186, 0.4) 0%,
+    rgba(255, 200, 150, 0.2) 50%,
+    transparent 70%
+  );
+  animation: pulse 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pet-excited .pet-aura {
+  background: radial-gradient(
+    circle,
+    rgba(255, 215, 0, 0.5) 0%,
+    rgba(255, 180, 50, 0.3) 50%,
+    transparent 70%
+  );
+  animation: pulseFast 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes pulseFast {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ========== SVG 麻糬动画 ========== */
+
+/* SVG 主体动画 */
+.mochi-svg {
+  transition: transform 0.3s ease;
+}
+
+/* 状态切换时的弹跳 */
+.pet-transitioning .mochi-svg {
+  animation: svgBounce 0.5s ease;
+}
+
+@keyframes svgBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-15px) scale(1.1); }
+  50% { transform: translateY(-10px) scale(1.05); }
+  70% { transform: translateY(-5px) scale(1.02); }
+}
+
+/* Idle - 呼吸动画 */
+.pet-idle .mochi-svg {
+  animation: svgBreathe 3s ease-in-out infinite;
+}
+
+@keyframes svgBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Happy - 左右摇摆 */
+.pet-happy .mochi-svg {
+  animation: svgSway 2s ease-in-out infinite;
+}
+
+@keyframes svgSway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* Excited - 跳跃 */
+.pet-excited .mochi-svg {
+  animation: svgJump 0.6s ease-in-out infinite;
+}
+
+@keyframes svgJump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.05); }
+}
+
+/* Sad - 缓慢下沉 */
+.pet-sad .mochi-svg {
+  animation: svgDroop 2.5s ease-in-out infinite;
+}
+
+@keyframes svgDroop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(5px) rotate(-3deg); }
+}
+
+/* Sleepy - 轻微浮动 */
+.pet-sleepy .mochi-svg {
+  animation: svgFloat 4s ease-in-out infinite;
+  opacity: 0.9;
+}
+
+@keyframes svgFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Interact - 欢快抖动 */
+.pet-interact .mochi-svg {
+  animation: svgShake 0.4s ease-in-out infinite;
+}
+
+@keyframes svgShake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-8deg) scale(1.02); }
+  75% { transform: rotate(8deg) scale(1.02); }
+}
+
+/* ========== SVG 内部元素动画 ========== */
+
+/* 麻糬身体 Q弹效果 */
+.mochi-body {
+  transform-origin: center bottom;
+}
+
+.pet-excited .mochi-body {
+  animation: bodySquash 0.6s ease-in-out infinite;
+}
+
+@keyframes bodySquash {
+  0%, 100% { transform: scaleX(1) scaleY(1); }
+  50% { transform: scaleX(0.95) scaleY(1.05); }
+}
+
+/* 阴影随动画变化 */
+.mochi-shadow {
+  transition: all 0.3s ease;
+}
+
+.pet-excited .mochi-shadow {
+  animation: shadowPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes shadowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.1; }
+  50% { transform: scale(0.8); opacity: 0.15; }
+}
+
+/* 互动爱心漂浮 */
+.floating-heart {
+  animation: heartFloat 1.5s ease-out infinite;
+}
+
+.floating-heart.delay-1 {
+  animation-delay: 0.5s;
+}
+
+@keyframes heartFloat {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-30px); opacity: 0; }
+}
+
+/* 兴奋星星闪烁 */
+.floating-star {
+  animation: starTwinkle 1s ease-in-out infinite;
+}
+
+.floating-star.delay-1 {
+  animation-delay: 0.3s;
+}
+
+.floating-star.delay-2 {
+  animation-delay: 0.6s;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* 睡觉 Zzz 动画 */
+.zzz-text {
+  animation: zzzFloat 2s ease-in-out infinite;
+}
+
+.zzz-text.delay-1 {
+  animation-delay: 0.5s;
+}
+
+.zzz-text.delay-2 {
+  animation-delay: 1s;
+}
+
+@keyframes zzzFloat {
+  0% { opacity: 0; transform: translateY(5px); }
+  50% { opacity: 1; transform: translateY(-5px); }
+  100% { opacity: 0; transform: translateY(-15px); }
+}
+
+/* 伤心汗滴 */
+.sweat-drop {
+  animation: sweatDrop 2s ease-in-out infinite;
+}
+
+@keyframes sweatDrop {
+  0%, 100% { transform: translateY(0); opacity: 0.8; }
+  50% { transform: translateY(10px); opacity: 0.4; }
+}

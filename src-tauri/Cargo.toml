@@ -1,0 +1,69 @@
+[package]
+name = "focus-mochi"
+version = "0.1.0"
+description = "FocusMochi - AI Desktop Pet that monitors your focus"
+authors = ["oh-yeah-zzy"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/oh-yeah-zzy/FocusMochi"
+
+[lib]
+name = "focus_mochi_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri core
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+
+# Image processing
+image = "0.25"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Thread-safe state
+parking_lot = "0.12"
+
+# ========== 视觉检测依赖 (Phase 2) ==========
+
+# 摄像头采集
+# Linux: 需要安装 libv4l-dev, libudev-dev, pkg-config, clang
+# macOS: 使用 AVFoundation，无需额外依赖
+# Windows: 使用 Media Foundation，需要 MSVC 工具链
+nokhwa = { version = "0.10", features = ["input-native"], optional = true }
+
+# ONNX Runtime - 人脸检测推理
+# 使用 load-dynamic 动态加载运行时库
+ort = { version = "2", default-features = false, features = ["ndarray", "load-dynamic"], optional = true }
+
+# ndarray - 张量操作
+ndarray = { version = "0.16", optional = true }
+
+[features]
+default = []
+# 启用视觉检测功能
+vision = ["nokhwa", "ort", "ndarray"]
+
+# 平台特定的摄像头后端（可选覆盖）
+# vision-v4l = ["nokhwa/input-v4l"]           # Linux V4L2
+# vision-avfoundation = ["nokhwa/input-avfoundation"]  # macOS
+# vision-msmf = ["nokhwa/input-msmf"]         # Windows Media Foundation
+
