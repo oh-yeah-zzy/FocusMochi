@@ -151,22 +151,32 @@ npm run tauri build
 
 **Windows:**
 ```powershell
-cd src-tauri
-cargo build --release --features vision
+# 开发模式
+npm run tauri dev -- --features vision
+
+# 构建发布版
+npm run tauri build -- --features vision
 ```
 
 **Linux:**
 ```bash
 # 先安装依赖
 sudo apt install libv4l-dev libudev-dev pkg-config clang
-cd src-tauri
-cargo build --release --features vision
+
+# 开发模式
+npm run tauri dev -- --features vision
+
+# 构建发布版
+npm run tauri build -- --features vision
 ```
 
 **macOS:**
 ```bash
-cd src-tauri
-cargo build --release --features vision
+# 开发模式
+npm run tauri dev -- --features vision
+
+# 构建发布版
+npm run tauri build -- --features vision
 ```
 
 启用后，按 V 键或点击调试面板中的按钮即可启动摄像头检测。
