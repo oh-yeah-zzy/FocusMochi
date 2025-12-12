@@ -183,7 +183,7 @@ impl BlazeFaceDetector {
     /// 检测到的人脸列表（按置信度降序排列）
     #[cfg(feature = "vision")]
     pub fn detect(
-        &self,
+        &mut self,
         image_data: &[u8],
         width: u32,
         height: u32,
@@ -287,7 +287,7 @@ impl BlazeFaceDetector {
     /// 模拟检测（无 vision feature）
     #[cfg(not(feature = "vision"))]
     pub fn detect(
-        &self,
+        &mut self,
         _image_data: &[u8],
         _width: u32,
         _height: u32,

@@ -49,7 +49,7 @@ pub fn run() {
             tracing::info!("FocusMochi setup complete");
 
             // 获取窗口并设置透明背景
-            if let Some(window) = app.get_webview_window("pet") {
+            if let Some(_window) = app.get_webview_window("pet") {
                 tracing::info!("Pet window found, configuring...");
                 // 窗口配置已在 tauri.conf.json 中设置
             }

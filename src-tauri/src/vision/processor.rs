@@ -116,7 +116,7 @@ impl VisionProcessor {
         let mut frame_rx = camera.subscribe();
 
         // 2. 创建人脸检测器
-        let detector = BlazeFaceDetector::new(
+        let mut detector = BlazeFaceDetector::new(
             &config.model_path,
             config.anchors_path.as_deref(),
         )
