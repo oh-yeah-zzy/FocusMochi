@@ -219,63 +219,68 @@ impl BlazeFaceDetector {
         let input_value = ort::value::Value::from_array(input_tensor)
             .map_err(|e| FaceDetectorError::InferenceError(format!("Input tensor error: {}", e)))?;
 
-        let outputs = self
-            .session
-            .run(ort::inputs![input_value])
-            .map_err(|e| FaceDetectorError::InferenceError(format!("Inference error: {}", e)))?;
+        // 使用代码块限制 outputs 的作用域，避免借用冲突
+        let mut detections = {
+            let outputs = self
+                .session
+                .run(ort::inputs![input_value])
+                .map_err(|e| FaceDetectorError::InferenceError(format!("Inference error: {}", e)))?;
 
-        // 5. 解析输出
-        // BlazeFace 输出: regressors [1, 896, 16] 和 classificators [1, 896, 1]
-        // ort 2.0: try_extract_tensor 返回 (&Shape, &[T])
-        let (_, regressors_data) = outputs[0]
-            .try_extract_tensor::<f32>()
-            .map_err(|e| FaceDetectorError::InferenceError(format!("Extract regressors error: {}", e)))?;
-        let (_, classificators_data) = outputs[1]
-            .try_extract_tensor::<f32>()
-            .map_err(|e| FaceDetectorError::InferenceError(format!("Extract classificators error: {}", e)))?;
+            // 5. 解析输出
+            // BlazeFace 输出: regressors [1, 896, 16] 和 classificators [1, 896, 1]
+            // ort 2.0: try_extract_tensor 返回 (&Shape, &[T])
+            let (_, regressors_data) = outputs[0]
+                .try_extract_tensor::<f32>()
+                .map_err(|e| FaceDetectorError::InferenceError(format!("Extract regressors error: {}", e)))?;
+            let (_, classificators_data) = outputs[1]
+                .try_extract_tensor::<f32>()
+                .map_err(|e| FaceDetectorError::InferenceError(format!("Extract classificators error: {}", e)))?;
 
-        // 6. 解码检测结果
-        // 输出形状: regressors [1, 896, 16] -> 扁平为 [896 * 16]
-        //          classificators [1, 896, 1] -> 扁平为 [896]
-        let mut detections = Vec::new();
+            // 6. 解码检测结果
+            // 输出形状: regressors [1, 896, 16] -> 扁平为 [896 * 16]
+            //          classificators [1, 896, 1] -> 扁平为 [896]
+            let mut detections = Vec::new();
 
-        for i in 0..896 {
-            // Sigmoid 转换置信度
-            // classificators 是 [1, 896, 1] 扁平后索引为 i
-            let score = 1.0 / (1.0 + (-classificators_data[i]).exp());
+            for i in 0..896 {
+                // Sigmoid 转换置信度
+                // classificators 是 [1, 896, 1] 扁平后索引为 i
+                let score = 1.0 / (1.0 + (-classificators_data[i]).exp());
 
-            if score > self.confidence_threshold {
-                // 解码边界框（相对于锚框）
-                let anchor_x = self.anchors[[i, 0]];
-                let anchor_y = self.anchors[[i, 1]];
+                if score > self.confidence_threshold {
+                    // 解码边界框（相对于锚框）
+                    let anchor_x = self.anchors[[i, 0]];
+                    let anchor_y = self.anchors[[i, 1]];
 
-                // regressors 是 [1, 896, 16] 扁平后，第 i 个检测框从 i * 16 开始
-                let reg_offset = i * 16;
-                let cx = anchor_x + regressors_data[reg_offset] / 128.0;
-                let cy = anchor_y + regressors_data[reg_offset + 1] / 128.0;
-                let w = regressors_data[reg_offset + 2] / 128.0;
-                let h = regressors_data[reg_offset + 3] / 128.0;
+                    // regressors 是 [1, 896, 16] 扁平后，第 i 个检测框从 i * 16 开始
+                    let reg_offset = i * 16;
+                    let cx = anchor_x + regressors_data[reg_offset] / 128.0;
+                    let cy = anchor_y + regressors_data[reg_offset + 1] / 128.0;
+                    let w = regressors_data[reg_offset + 2] / 128.0;
+                    let h = regressors_data[reg_offset + 3] / 128.0;
 
-                let x1 = (cx - w / 2.0).clamp(0.0, 1.0);
-                let y1 = (cy - h / 2.0).clamp(0.0, 1.0);
-                let x2 = (cx + w / 2.0).clamp(0.0, 1.0);
-                let y2 = (cy + h / 2.0).clamp(0.0, 1.0);
+                    let x1 = (cx - w / 2.0).clamp(0.0, 1.0);
+                    let y1 = (cy - h / 2.0).clamp(0.0, 1.0);
+                    let x2 = (cx + w / 2.0).clamp(0.0, 1.0);
+                    let y2 = (cy + h / 2.0).clamp(0.0, 1.0);
 
-                // 解码 6 个关键点
-                let mut landmarks = [(0.0f32, 0.0f32); 6];
-                for j in 0..6 {
-                    let lx = anchor_x + regressors_data[reg_offset + 4 + j * 2] / 128.0;
-                    let ly = anchor_y + regressors_data[reg_offset + 4 + j * 2 + 1] / 128.0;
-                    landmarks[j] = (lx.clamp(0.0, 1.0), ly.clamp(0.0, 1.0));
+                    // 解码 6 个关键点
+                    let mut landmarks = [(0.0f32, 0.0f32); 6];
+                    for j in 0..6 {
+                        let lx = anchor_x + regressors_data[reg_offset + 4 + j * 2] / 128.0;
+                        let ly = anchor_y + regressors_data[reg_offset + 4 + j * 2 + 1] / 128.0;
+                        landmarks[j] = (lx.clamp(0.0, 1.0), ly.clamp(0.0, 1.0));
+                    }
+
+                    detections.push(FaceDetection {
+                        confidence: score,
+                        bbox: (x1, y1, x2, y2),
+                        landmarks,
+                    });
                 }
-
-                detections.push(FaceDetection {
-                    confidence: score,
-                    bbox: (x1, y1, x2, y2),
-                    landmarks,
-                });
             }
-        }
+
+            detections
+        }; // outputs 在此处被 drop，释放对 self.session 的借用
 
         // 7. NMS（非极大值抑制）
         detections.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap());
