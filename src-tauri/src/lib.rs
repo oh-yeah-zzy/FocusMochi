@@ -13,6 +13,7 @@ pub mod vision;
 use commands::AppState;
 use std::sync::Arc;
 use tauri::Manager;
+use tauri::window::Color;
 
 /// 应用主入口
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -49,9 +50,15 @@ pub fn run() {
             tracing::info!("FocusMochi setup complete");
 
             // 获取窗口并设置透明背景
-            if let Some(_window) = app.get_webview_window("pet") {
+            if let Some(window) = app.get_webview_window("pet") {
                 tracing::info!("Pet window found, configuring...");
-                // 窗口配置已在 tauri.conf.json 中设置
+
+                // 设置 WebView 背景为透明
+                // Windows 上需要通过 webview 的 set_background_color 方法
+                // Color(r, g, b, a) - 设置 alpha 为 0 实现透明
+                if let Err(e) = window.set_background_color(Some(Color(0, 0, 0, 0))) {
+                    tracing::warn!("Failed to set background color: {}", e);
+                }
             }
 
             Ok(())
