@@ -46,12 +46,11 @@ html, body, #root {
   -webkit-app-region: no-drag;
 }
 
-/* 调试面板 */
+/* 调试面板 - 移到左上角避免遮挡情绪指示器 */
 .debug-panel {
   position: fixed;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 10px;
+  left: 10px;
   background: rgba(40, 40, 40, 0.85);
   padding: 8px 12px;
   border-radius: 8px;

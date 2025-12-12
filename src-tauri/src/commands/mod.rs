@@ -182,7 +182,9 @@ pub async fn start_vision(
         // 启动预览帧推送任务
         let app_handle_preview = app_handle.clone();
         tokio::spawn(async move {
+            tracing::info!("Vision preview task started, waiting for frames...");
             let mut rx = frame_rx;
+            let mut frame_count = 0u64;
 
             while rx.changed().await.is_ok() {
                 let frame = rx.borrow().clone();
@@ -191,13 +193,23 @@ pub async fn start_vision(
                     continue;
                 }
 
+                frame_count += 1;
+                if frame_count == 1 {
+                    tracing::info!("First frame received for preview: {}x{}", frame.width, frame.height);
+                }
+
                 // 将 RGB 帧编码为 JPEG 并转为 base64
                 if let Some(preview) = encode_frame_to_base64(&frame) {
+                    if frame_count % 30 == 1 {
+                        tracing::debug!("Emitting preview frame #{}", frame_count);
+                    }
                     let _ = app_handle_preview.emit("vision_preview", preview);
+                } else {
+                    tracing::warn!("Failed to encode frame #{} to base64", frame_count);
                 }
             }
 
-            tracing::info!("Vision preview task ended");
+            tracing::info!("Vision preview task ended after {} frames", frame_count);
         });
 
         Ok(())

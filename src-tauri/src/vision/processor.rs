@@ -164,8 +164,12 @@ impl VisionProcessor {
 
             frame_count += 1;
 
-            // 转发帧用于预览（每 3 帧转发一次，约 3-4 fps）
-            if frame_count % 3 == 0 {
+            if frame_count == 1 {
+                tracing::info!("First frame captured: {}x{}", frame.width, frame.height);
+            }
+
+            // 转发帧用于预览（每 3 帧转发一次，约 3-4 fps，包含第一帧）
+            if frame_count % 3 == 1 {
                 let _ = frame_tx.send(frame.clone());
             }
 
