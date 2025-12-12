@@ -14,6 +14,7 @@
   user-select: none;
   position: relative;
   transition: transform 0.3s ease;
+  margin-bottom: 50px; /* 为表情指示器和调试面板预留空间 */
 }
 
 .pet-container:hover {
