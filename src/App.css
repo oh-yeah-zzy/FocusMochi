@@ -51,16 +51,17 @@ html, body, #root {
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(40, 40, 40, 0.85);
   padding: 8px 12px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
   min-width: 120px;
   -webkit-app-region: no-drag;
+  backdrop-filter: blur(8px);
 }
 
 .debug-item {
@@ -70,12 +71,12 @@ html, body, #root {
 }
 
 .debug-label {
-  color: #888;
+  color: #aaa;
   font-weight: 500;
 }
 
 .debug-value {
-  color: #333;
+  color: #f0f0f0;
   font-weight: 600;
 }
 
@@ -92,8 +93,8 @@ html, body, #root {
 .debug-help {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid #eee;
-  color: #aaa;
+  border-top: 1px solid #555;
+  color: #888;
   text-align: center;
 }
 
@@ -128,26 +129,9 @@ html, body, #root {
   background: #16a34a;
 }
 
-/* 深色模式 */
+/* 深色模式 - 调试面板已默认使用深色主题，无需额外调整 */
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f0f0f0;
-  }
-
-  .debug-panel {
-    background: rgba(30, 30, 30, 0.95);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .debug-label {
-    color: #888;
-  }
-
-  .debug-value {
-    color: #f0f0f0;
-  }
-
-  .debug-help {
-    border-top-color: #444;
   }
 }
