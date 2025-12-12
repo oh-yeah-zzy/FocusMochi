@@ -101,82 +101,93 @@ pub async fn start_vision(
 
     tracing::info!("Starting vision detection...");
 
-    // 获取资源目录路径
-    let resource_path = app_handle
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+    // 使用闭包来处理启动逻辑，失败时自动重置 vision_running
+    let result = (|| -> Result<(), String> {
+        // 获取资源目录路径
+        let resource_path = app_handle
+            .path()
+            .resource_dir()
+            .map_err(|e| format!("Failed to get resource dir: {}", e))?;
 
-    let model_path = resource_path
-        .join("models")
-        .join("blazeface.onnx")
-        .to_string_lossy()
-        .to_string();
+        let model_path = resource_path
+            .join("models")
+            .join("blazeface.onnx")
+            .to_string_lossy()
+            .to_string();
 
-    let anchors_path = resource_path
-        .join("models")
-        .join("anchors.npy")
-        .to_string_lossy()
-        .to_string();
+        let anchors_path = resource_path
+            .join("models")
+            .join("anchors.npy")
+            .to_string_lossy()
+            .to_string();
 
-    // 创建视觉处理器配置
-    let config = VisionProcessorConfig {
-        model_path,
-        anchors_path: Some(anchors_path),
-        detect_every_frame: false, // 隔帧检测以降低 CPU
-        ..Default::default()
-    };
+        // 创建视觉处理器配置
+        let config = VisionProcessorConfig {
+            model_path,
+            anchors_path: Some(anchors_path),
+            detect_every_frame: false, // 隔帧检测以降低 CPU
+            ..Default::default()
+        };
 
-    // 创建视觉处理器
-    let processor = Arc::new(VisionProcessor::new(config));
-    let focus_rx = processor.subscribe();
+        // 创建视觉处理器
+        let processor = Arc::new(VisionProcessor::new(config));
+        let focus_rx = processor.subscribe();
 
-    // 启动处理器
-    processor.start()?;
+        // 启动处理器
+        processor.start()?;
 
-    // 保存处理器和接收器
-    {
-        *state.vision_processor.lock() = Some(processor.clone());
-        *state.focus_state_rx.lock() = Some(focus_rx.clone());
-    }
-
-    // 启动状态更新任务
-    let state_clone = Arc::clone(&state);
-    let app_handle_clone = app_handle.clone();
-
-    tokio::spawn(async move {
-        let mut rx = focus_rx;
-
-        while rx.changed().await.is_ok() {
-            let focus_state = rx.borrow().clone();
-
-            // 更新宠物状态机
-            {
-                let mut machine = state_clone.pet_state_machine.lock();
-                let new_mood = machine.update(focus_state.focus_score, focus_state.face_present);
-
-                // 如果状态改变，发送事件到前端
-                if let Some(mood) = new_mood {
-                    let _ = app_handle_clone.emit("pet_mood_changed", mood);
-                }
-
-                // 更新统计
-                let mut stats = state_clone.focus_stats.lock();
-                stats.focus_score = focus_state.focus_score;
-                stats.current_mood = machine.mood;
-                stats.focus_level = machine.focus_level;
-                stats.total_focus_ms = machine.total_focus_ms;
-            }
-
-            // 发送专注状态事件
-            let _ = app_handle_clone.emit("focus_state", &focus_state);
+        // 保存处理器和接收器
+        {
+            *state.vision_processor.lock() = Some(processor.clone());
+            *state.focus_state_rx.lock() = Some(focus_rx.clone());
         }
 
-        tracing::info!("Vision state update task ended");
-    });
+        // 启动状态更新任务
+        let state_clone = Arc::clone(&state);
+        let app_handle_clone = app_handle.clone();
 
-    tracing::info!("Vision detection started successfully");
-    Ok(())
+        tokio::spawn(async move {
+            let mut rx = focus_rx;
+
+            while rx.changed().await.is_ok() {
+                let focus_state = rx.borrow().clone();
+
+                // 更新宠物状态机
+                {
+                    let mut machine = state_clone.pet_state_machine.lock();
+                    let new_mood = machine.update(focus_state.focus_score, focus_state.face_present);
+
+                    // 如果状态改变，发送事件到前端
+                    if let Some(mood) = new_mood {
+                        let _ = app_handle_clone.emit("pet_mood_changed", mood);
+                    }
+
+                    // 更新统计
+                    let mut stats = state_clone.focus_stats.lock();
+                    stats.focus_score = focus_state.focus_score;
+                    stats.current_mood = machine.mood;
+                    stats.focus_level = machine.focus_level;
+                    stats.total_focus_ms = machine.total_focus_ms;
+                }
+
+                // 发送专注状态事件
+                let _ = app_handle_clone.emit("focus_state", &focus_state);
+            }
+
+            tracing::info!("Vision state update task ended");
+        });
+
+        Ok(())
+    })();
+
+    // 如果启动失败，重置 vision_running 状态
+    if result.is_err() {
+        *state.vision_running.lock() = false;
+    }
+
+    result.map(|_| {
+        tracing::info!("Vision detection started successfully");
+    })
 }
 
 /// 停止视觉检测
