@@ -130,7 +130,6 @@ impl BlazeFaceDetector {
     /// * `anchors_path` - 锚框 npy 文件路径（可选，会尝试自动生成）
     #[cfg(feature = "vision")]
     pub fn new(model_path: &str, anchors_path: Option<&str>) -> Result<Self, FaceDetectorError> {
-        use ndarray::Array2;
         use ort::session::{Session, builder::GraphOptimizationLevel};
 
         // 加载 ONNX 模型
@@ -190,7 +189,7 @@ impl BlazeFaceDetector {
         height: u32,
     ) -> Result<Vec<FaceDetection>, FaceDetectorError> {
         use image::{ImageBuffer, Rgb};
-        use ndarray::{Array, Array4};
+        use ndarray::Array4;
 
         // 1. 将原始数据转换为 RgbImage
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
@@ -216,8 +215,8 @@ impl BlazeFaceDetector {
             }
         }
 
-        // 4. 运行推理
-        let input_value = ort::value::Value::from_array(input_tensor.view())
+        // 4. 运行推理（ort 2.0: from_array 需要 owned array）
+        let input_value = ort::value::Value::from_array(input_tensor)
             .map_err(|e| FaceDetectorError::InferenceError(format!("Input tensor error: {}", e)))?;
 
         let outputs = self
@@ -227,32 +226,35 @@ impl BlazeFaceDetector {
 
         // 5. 解析输出
         // BlazeFace 输出: regressors [1, 896, 16] 和 classificators [1, 896, 1]
-        let regressors = outputs[0]
+        // ort 2.0: try_extract_tensor 返回 (&Shape, &[T])
+        let (_, regressors_data) = outputs[0]
             .try_extract_tensor::<f32>()
             .map_err(|e| FaceDetectorError::InferenceError(format!("Extract regressors error: {}", e)))?;
-        let classificators = outputs[1]
+        let (_, classificators_data) = outputs[1]
             .try_extract_tensor::<f32>()
             .map_err(|e| FaceDetectorError::InferenceError(format!("Extract classificators error: {}", e)))?;
 
-        let regressors = regressors.view();
-        let classificators = classificators.view();
-
         // 6. 解码检测结果
+        // 输出形状: regressors [1, 896, 16] -> 扁平为 [896 * 16]
+        //          classificators [1, 896, 1] -> 扁平为 [896]
         let mut detections = Vec::new();
 
         for i in 0..896 {
             // Sigmoid 转换置信度
-            let score = 1.0 / (1.0 + (-classificators[[0, i, 0]]).exp());
+            // classificators 是 [1, 896, 1] 扁平后索引为 i
+            let score = 1.0 / (1.0 + (-classificators_data[i]).exp());
 
             if score > self.confidence_threshold {
                 // 解码边界框（相对于锚框）
                 let anchor_x = self.anchors[[i, 0]];
                 let anchor_y = self.anchors[[i, 1]];
 
-                let cx = anchor_x + regressors[[0, i, 0]] / 128.0;
-                let cy = anchor_y + regressors[[0, i, 1]] / 128.0;
-                let w = regressors[[0, i, 2]] / 128.0;
-                let h = regressors[[0, i, 3]] / 128.0;
+                // regressors 是 [1, 896, 16] 扁平后，第 i 个检测框从 i * 16 开始
+                let reg_offset = i * 16;
+                let cx = anchor_x + regressors_data[reg_offset] / 128.0;
+                let cy = anchor_y + regressors_data[reg_offset + 1] / 128.0;
+                let w = regressors_data[reg_offset + 2] / 128.0;
+                let h = regressors_data[reg_offset + 3] / 128.0;
 
                 let x1 = (cx - w / 2.0).clamp(0.0, 1.0);
                 let y1 = (cy - h / 2.0).clamp(0.0, 1.0);
@@ -262,8 +264,8 @@ impl BlazeFaceDetector {
                 // 解码 6 个关键点
                 let mut landmarks = [(0.0f32, 0.0f32); 6];
                 for j in 0..6 {
-                    let lx = anchor_x + regressors[[0, i, 4 + j * 2]] / 128.0;
-                    let ly = anchor_y + regressors[[0, i, 4 + j * 2 + 1]] / 128.0;
+                    let lx = anchor_x + regressors_data[reg_offset + 4 + j * 2] / 128.0;
+                    let ly = anchor_y + regressors_data[reg_offset + 4 + j * 2 + 1] / 128.0;
                     landmarks[j] = (lx.clamp(0.0, 1.0), ly.clamp(0.0, 1.0));
                 }
 

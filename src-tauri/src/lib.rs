@@ -11,6 +11,7 @@ pub mod storage;
 pub mod vision;
 
 use commands::AppState;
+use std::sync::Arc;
 use tauri::Manager;
 
 /// 应用主入口
@@ -26,8 +27,8 @@ pub fn run() {
 
     tracing::info!("FocusMochi starting...");
 
-    // 创建应用状态
-    let app_state = AppState::default();
+    // 创建应用状态（使用 Arc 包装以便在异步任务中共享）
+    let app_state = Arc::new(AppState::default());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

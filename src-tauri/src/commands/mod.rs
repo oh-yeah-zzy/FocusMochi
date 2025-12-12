@@ -44,7 +44,7 @@ impl Default for AppState {
 
 /// 获取当前宠物状态
 #[tauri::command]
-pub fn get_pet_state(state: State<'_, AppState>) -> PetStateResponse {
+pub fn get_pet_state(state: State<'_, Arc<AppState>>) -> PetStateResponse {
     let machine = state.pet_state_machine.lock();
     let stats = state.focus_stats.lock().clone();
     let vision_running = *state.vision_running.lock();
@@ -88,7 +88,7 @@ pub struct PetStateResponse {
 /// 启动视觉检测
 #[tauri::command]
 pub async fn start_vision(
-    state: State<'_, AppState>,
+    state: State<'_, Arc<AppState>>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     {
@@ -141,7 +141,7 @@ pub async fn start_vision(
     }
 
     // 启动状态更新任务
-    let state_clone = state.inner().clone();
+    let state_clone = Arc::clone(&state);
     let app_handle_clone = app_handle.clone();
 
     tokio::spawn(async move {
@@ -181,7 +181,7 @@ pub async fn start_vision(
 
 /// 停止视觉检测
 #[tauri::command]
-pub fn stop_vision(state: State<'_, AppState>) -> Result<(), String> {
+pub fn stop_vision(state: State<'_, Arc<AppState>>) -> Result<(), String> {
     let mut running = state.vision_running.lock();
     if !*running {
         return Err("Vision is not running".to_string());
@@ -205,7 +205,7 @@ pub fn stop_vision(state: State<'_, AppState>) -> Result<(), String> {
 
 /// 触发手势事件（用于测试/Demo模式）
 #[tauri::command]
-pub fn trigger_gesture(gesture: String, state: State<'_, AppState>) -> Result<PetMood, String> {
+pub fn trigger_gesture(gesture: String, state: State<'_, Arc<AppState>>) -> Result<PetMood, String> {
     let gesture_type = match gesture.to_lowercase().as_str() {
         "wave" => GestureType::Wave,
         "heart" => GestureType::Heart,
@@ -225,7 +225,7 @@ pub fn trigger_gesture(gesture: String, state: State<'_, AppState>) -> Result<Pe
 
 /// 设置 Demo 模式的宠物状态（用于录屏展示）
 #[tauri::command]
-pub fn set_demo_mood(mood: String, state: State<'_, AppState>) -> Result<PetMood, String> {
+pub fn set_demo_mood(mood: String, state: State<'_, Arc<AppState>>) -> Result<PetMood, String> {
     let new_mood = match mood.to_lowercase().as_str() {
         "idle" => PetMood::Idle,
         "happy" => PetMood::Happy,
@@ -246,13 +246,13 @@ pub fn set_demo_mood(mood: String, state: State<'_, AppState>) -> Result<PetMood
 
 /// 获取今日专注统计
 #[tauri::command]
-pub fn get_focus_stats(state: State<'_, AppState>) -> FocusStats {
+pub fn get_focus_stats(state: State<'_, Arc<AppState>>) -> FocusStats {
     state.focus_stats.lock().clone()
 }
 
 /// 重置今日统计
 #[tauri::command]
-pub fn reset_stats(state: State<'_, AppState>) {
+pub fn reset_stats(state: State<'_, Arc<AppState>>) {
     let mut stats = state.focus_stats.lock();
     stats.total_focus_ms = 0;
 
@@ -264,7 +264,7 @@ pub fn reset_stats(state: State<'_, AppState>) {
 
 /// 获取视觉检测状态（详细信息）
 #[tauri::command]
-pub fn get_vision_status(state: State<'_, AppState>) -> VisionStatusResponse {
+pub fn get_vision_status(state: State<'_, Arc<AppState>>) -> VisionStatusResponse {
     let running = *state.vision_running.lock();
 
     let focus_state = if running {
