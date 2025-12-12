@@ -15,7 +15,7 @@
         "label": "pet",
         "title": "FocusMochi",
         "width": 250,
-        "height": 320,
+        "height": 450,
         "resizable": false,
         "decorations": false,
         "transparent": true,

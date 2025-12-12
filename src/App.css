@@ -34,7 +34,8 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 30px;
   background: transparent;
   /* 允许拖拽窗口 */
   -webkit-app-region: drag;
