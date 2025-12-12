@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { Pet } from './components/Pet';
+import { CameraPreview } from './components/CameraPreview';
 import { usePetStore } from './stores/petStore';
 import type { PetMood, GestureType } from './types';
 import './App.css';
@@ -80,6 +81,9 @@ function App() {
 
   return (
     <main className="app-container">
+      {/* 摄像头预览（视觉检测开启时显示） */}
+      <CameraPreview visible={isVisionActive} />
+
       {/* 宠物主体 */}
       <Pet mood={mood} onClick={handlePetClick} />
 

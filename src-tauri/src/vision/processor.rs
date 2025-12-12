@@ -48,24 +48,36 @@ pub struct VisionProcessor {
     state_tx: watch::Sender<FocusState>,
     /// 专注状态接收端（供外部订阅）
     state_rx: watch::Receiver<FocusState>,
+    /// 原始帧发送端（用于预览）
+    frame_tx: watch::Sender<super::CapturedFrame>,
+    /// 原始帧接收端（供外部订阅预览）
+    frame_rx: watch::Receiver<super::CapturedFrame>,
 }
 
 impl VisionProcessor {
     /// 创建视觉处理器
     pub fn new(config: VisionProcessorConfig) -> Self {
         let (state_tx, state_rx) = watch::channel(FocusState::default());
+        let (frame_tx, frame_rx) = watch::channel(super::CapturedFrame::empty());
 
         Self {
             config,
             running: Arc::new(AtomicBool::new(false)),
             state_tx,
             state_rx,
+            frame_tx,
+            frame_rx,
         }
     }
 
     /// 获取专注状态订阅器
     pub fn subscribe(&self) -> watch::Receiver<FocusState> {
         self.state_rx.clone()
+    }
+
+    /// 获取帧数据订阅器（用于预览）
+    pub fn subscribe_frames(&self) -> watch::Receiver<super::CapturedFrame> {
+        self.frame_rx.clone()
     }
 
     /// 检查是否正在运行
@@ -82,13 +94,14 @@ impl VisionProcessor {
         let running = self.running.clone();
         let config = self.config.clone();
         let state_tx = self.state_tx.clone();
+        let frame_tx = self.frame_tx.clone();
 
         running.store(true, Ordering::SeqCst);
 
         tokio::spawn(async move {
             tracing::info!("Vision processor starting...");
 
-            if let Err(e) = Self::run_processing_loop(&config, &running, &state_tx).await {
+            if let Err(e) = Self::run_processing_loop(&config, &running, &state_tx, &frame_tx).await {
                 tracing::error!("Vision processing error: {}", e);
             }
 
@@ -110,6 +123,7 @@ impl VisionProcessor {
         config: &VisionProcessorConfig,
         running: &Arc<AtomicBool>,
         state_tx: &watch::Sender<FocusState>,
+        frame_tx: &watch::Sender<super::CapturedFrame>,
     ) -> Result<(), String> {
         // 1. 创建摄像头采集器
         let camera = CameraCapture::new(config.camera.clone());
@@ -149,6 +163,11 @@ impl VisionProcessor {
             }
 
             frame_count += 1;
+
+            // 转发帧用于预览（每 3 帧转发一次，约 3-4 fps）
+            if frame_count % 3 == 0 {
+                let _ = frame_tx.send(frame.clone());
+            }
 
             // 是否进行检测（隔帧检测以降低 CPU）
             let should_detect = config.detect_every_frame || (frame_count % 2 == 0);

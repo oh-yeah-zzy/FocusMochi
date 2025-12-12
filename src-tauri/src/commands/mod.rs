@@ -4,12 +4,13 @@
 //! 包括宠物状态管理、视觉检测控制等功能
 
 use crate::state::{FocusStats, GestureType, PetMood, PetStateMachine, PetStateConfig};
-use crate::vision::{FocusState, VisionProcessor, VisionProcessorConfig};
+use crate::vision::{FocusState, VisionProcessor, VisionProcessorConfig, CapturedFrame};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{State, Manager, Emitter};
 use parking_lot::Mutex;
 use tokio::sync::watch;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 /// 应用全局状态
 pub struct AppState {
@@ -132,6 +133,7 @@ pub async fn start_vision(
         // 创建视觉处理器
         let processor = Arc::new(VisionProcessor::new(config));
         let focus_rx = processor.subscribe();
+        let frame_rx = processor.subscribe_frames();
 
         // 启动处理器
         processor.start()?;
@@ -175,6 +177,27 @@ pub async fn start_vision(
             }
 
             tracing::info!("Vision state update task ended");
+        });
+
+        // 启动预览帧推送任务
+        let app_handle_preview = app_handle.clone();
+        tokio::spawn(async move {
+            let mut rx = frame_rx;
+
+            while rx.changed().await.is_ok() {
+                let frame = rx.borrow().clone();
+
+                if frame.is_empty() {
+                    continue;
+                }
+
+                // 将 RGB 帧编码为 JPEG 并转为 base64
+                if let Some(preview) = encode_frame_to_base64(&frame) {
+                    let _ = app_handle_preview.emit("vision_preview", preview);
+                }
+            }
+
+            tracing::info!("Vision preview task ended");
         });
 
         Ok(())
@@ -297,4 +320,53 @@ pub struct VisionStatusResponse {
     pub is_running: bool,
     /// 当前专注状态
     pub focus_state: Option<FocusState>,
+}
+
+/// 预览帧数据（发送到前端）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreviewFrame {
+    /// Base64 编码的 JPEG 图像
+    pub data: String,
+    /// 图像宽度
+    pub width: u32,
+    /// 图像高度
+    pub height: u32,
+    /// 时间戳
+    pub timestamp_ms: u64,
+}
+
+/// 将摄像头帧编码为 base64 JPEG
+fn encode_frame_to_base64(frame: &CapturedFrame) -> Option<PreviewFrame> {
+    use image::{RgbImage, ImageEncoder, codecs::jpeg::JpegEncoder};
+    use std::io::Cursor;
+
+    // 从原始 RGB 数据创建图像
+    let img = RgbImage::from_raw(frame.width, frame.height, frame.data.clone())?;
+
+    // 缩小图像以减少传输大小（目标宽度 160px）
+    let scale = 160.0 / frame.width as f32;
+    let new_width = 160;
+    let new_height = (frame.height as f32 * scale) as u32;
+    let resized = image::imageops::resize(&img, new_width, new_height, image::imageops::FilterType::Triangle);
+
+    // 编码为 JPEG
+    let mut buffer = Cursor::new(Vec::new());
+    let encoder = JpegEncoder::new_with_quality(&mut buffer, 60);
+    encoder.write_image(
+        resized.as_raw(),
+        new_width,
+        new_height,
+        image::ExtendedColorType::Rgb8,
+    ).ok()?;
+
+    // 转为 base64
+    let jpeg_data = buffer.into_inner();
+    let base64_data = BASE64.encode(&jpeg_data);
+
+    Some(PreviewFrame {
+        data: format!("data:image/jpeg;base64,{}", base64_data),
+        width: new_width,
+        height: new_height,
+        timestamp_ms: frame.timestamp_ms,
+    })
 }

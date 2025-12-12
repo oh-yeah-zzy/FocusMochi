@@ -64,6 +64,18 @@ export interface VisionStatusResponse {
   focus_state: FocusState | null;
 }
 
+/** 摄像头预览帧 */
+export interface PreviewFrame {
+  /** Base64 编码的 JPEG 图像 (data URL) */
+  data: string;
+  /** 图像宽度 */
+  width: number;
+  /** 图像高度 */
+  height: number;
+  /** 时间戳（毫秒） */
+  timestamp_ms: number;
+}
+
 /** 专注统计 */
 export interface FocusStats {
   /** 累计专注时间（毫秒） */
